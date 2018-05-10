@@ -1,0 +1,8 @@
+spring:
+  main:
+    banner-mode: "off"
+  jpa:
+    properties:
+      hibernate:
+        show_sql: false
+        enable_lazy_load_no_trans: true
