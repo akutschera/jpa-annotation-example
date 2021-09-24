@@ -10,6 +10,7 @@ import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import javax.persistence.JoinColumn;
+import javax.persistence.JoinTable;
 import javax.persistence.ManyToMany;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToOne;
@@ -24,21 +25,23 @@ import lombok.Setter;
 @Entity
 @Getter
 @Setter
-@EqualsAndHashCode(of = { "id" })
 public class Student implements Serializable {
 
     @Id
     @GeneratedValue
     private Long id;
 
-    @OneToOne(mappedBy = "student", cascade = { CascadeType.PERSIST, CascadeType.REMOVE })
+    @OneToOne(cascade = { CascadeType.ALL})
+    @JoinColumn(name = "masterThesis_id", referencedColumnName = "id")
     private MasterThesis masterThesis;
 
     @ManyToOne(cascade = { CascadeType.PERSIST })
     @JoinColumn(name = "GRADUATION_CLASS_ID")
     private GraduationClass graduationClass;
 
-    @ManyToMany(fetch = FetchType.LAZY, mappedBy = "students", cascade = CascadeType.PERSIST)
+    @ManyToMany(cascade = CascadeType.ALL)
+    @JoinTable(name = "student_course", joinColumns = @JoinColumn(name = "student_id")
+            , inverseJoinColumns = @JoinColumn(name = "course_id"))
     private Set<Course> courses = new HashSet<>( 2 );
 
     public void setMasterThesis( MasterThesis masterThesis ) {

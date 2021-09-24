@@ -11,6 +11,7 @@ import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.JoinTable;
 import javax.persistence.ManyToMany;
+import javax.persistence.PreRemove;
 
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -22,16 +23,13 @@ import lombok.Setter;
 @Entity
 @Getter
 @Setter
-@EqualsAndHashCode(of = { "id" })
 public class Course {
 
     @Id
     @GeneratedValue
     private Long id;
 
-    @ManyToMany(fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
-    @JoinTable(name = "student_course", joinColumns = @JoinColumn(name = "student_id")
-            , inverseJoinColumns = @JoinColumn(name = "course_id"))
+    @ManyToMany(mappedBy = "courses")
     private Set<Student> students = new HashSet<>( 2 );
 
     public void addStudent( Student student ) {
@@ -46,6 +44,11 @@ public class Course {
 
     private boolean hasStudentAlready( Student student ) {
         return students.contains( student );
+    }
+
+    @PreRemove
+    private void deleteCourse() {
+        students.forEach( x -> x.removeCourse( this  ) );
     }
 
     public void removeStudent( Student student ) {

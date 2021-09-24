@@ -30,8 +30,7 @@ public class MasterThesis implements Serializable{
     @GeneratedValue
     private Long id;
 
-    @OneToOne
-    @JoinColumn(name = "student_id")
+    @OneToOne(mappedBy = "masterThesis")
     private Student student;
 
     private boolean alreadySetting = false;

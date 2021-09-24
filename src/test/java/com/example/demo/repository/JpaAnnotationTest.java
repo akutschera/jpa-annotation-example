@@ -1,9 +1,11 @@
 package com.example.demo.repository;
 
 
+import static org.assertj.core.api.Assertions.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -22,18 +24,16 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
-import org.springframework.test.context.junit.jupiter.SpringExtension;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 /**
  * Created by Andreas Kutschera.
  */
 @DataJpaTest
-@ExtendWith(SpringExtension.class)
 @DisplayName("Jpa Annotations")
 class JpaAnnotationTest {
 
@@ -52,6 +52,9 @@ class JpaAnnotationTest {
     @Autowired
     private TestEntityManager entityManager;
 
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
 
     @Nested
     @DisplayName("@OneToOne")
@@ -64,16 +67,6 @@ class JpaAnnotationTest {
         void init() {
             masterThesis = new MasterThesis();
             student = new Student();
-        }
-
-        @Test
-        @DisplayName("saving inverse first will result in exception")
-        void saveThesis() {
-            masterThesis.setStudent( student );
-            assertThatExceptionOfType( InvalidDataAccessApiUsageException.class )
-                    .as( "we need to save the student field, because the student-id is the foreign field" )
-                    .isThrownBy( () ->
-                                         masterThesisRepository.save( masterThesis ) );
         }
 
         private void ensureBothRelationsAreSaved() {
@@ -101,8 +94,7 @@ class JpaAnnotationTest {
         }
 
         @Test
-        @DisplayName("save inverse before setting owner will result in detached entity")
-        @Disabled("until https://jira.spring.io/browse/DATAJPA-866 is solved")
+        @DisplayName("save inverse before setting owner will not result in detached entity")
         void saveThesisBeforeSetting() {
             masterThesisRepository.save( masterThesis );
             student.setMasterThesis( masterThesis );
@@ -217,26 +209,11 @@ class JpaAnnotationTest {
             courseRepository.save( course );
 
             List<Course> courses = courseRepository.findAll();
-            assertThat( courses ).as("course should have been persisted, too").isNotEmpty();
+            assertThat( courses ).as( "course should have been persisted, too" ).isNotEmpty();
             assertThat( courses.get( 0 ).getStudents() ).contains( student );
             assertThat( student.getCourses() ).contains( course );
         }
-        
-        @Test
-        @DisplayName("students should be persisted in courses")
-        void persistStudentInCourse () {
-            Course course = new Course();
-            Student student = new Student();
-            course.addStudent( student );
 
-            courseRepository.save( course );
-
-            List<Student> students = studentRepository.findAll();
-            assertThat( students ).isNotEmpty();
-            assertThat( students.get( 0 ).getCourses() ).contains( course );
-            assertThat( course.getStudents() ).contains( student );
-        }
-        
         @Test
         @DisplayName("courses should be taken by more than one student")
         void persistMultipleStudentsInCourse() {
@@ -250,9 +227,9 @@ class JpaAnnotationTest {
             courseRepository.save( course );
 
             List<Course> courses = courseRepository.findAll();
-            assertThat( courses.get(0).getStudents() ).as("students need a name or something like that").hasSize(2);
+            assertThat( courses.get( 0 ).getStudents() ).as( "students need a name or something like that" ).hasSize( 2 );
         }
-        
+
         @Test
         @DisplayName("leaving a course should keep all other students in the course")
         void leaveCourse() {
@@ -262,7 +239,8 @@ class JpaAnnotationTest {
             Student studentToLeave = new Student();
             course.addStudent( studentToLeave );
 
-            courseRepository.save( course );
+            studentRepository.save( student );
+            studentRepository.save( studentToLeave );
 
             studentToLeave.removeCourse( course );
             // choose one or the other (both will work but are not needed)
@@ -275,16 +253,18 @@ class JpaAnnotationTest {
         }
 
         @Test
-        @DisplayName("deleting a course should delete the course from all students")
+        @DisplayName("deleting a course should delete the course from all students (@PreRemove does that)")
         void deleteCourse() {
             Course course = new Course();
             Student student = new Student();
-            course.addStudent( student );
-            courseRepository.save( course );
+            student.addCourse( course );
+            studentRepository.save( student );
 
-            assertThat( studentRepository.findAll().get( 0 ).getCourses()).isNotEmpty();
+            assertThat( studentRepository.findAll().get( 0 ).getCourses() ).isNotEmpty();
             courseRepository.delete( course );
-            assertThat( studentRepository.findAll().get( 0 ).getCourses()).isEmpty();
+            assertThat( courseRepository.count() ).isZero();
+            assertThat( studentRepository.count() ).as( "student should still be there" ).isPositive();
+            assertThat( studentRepository.findAll().get( 0 ).getCourses() ).isEmpty();
         }
     }
     //    @Test
