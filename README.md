@@ -1,4 +1,4 @@
-[Travis CI:  ![build status badge](https://travis-ci.com/akutschera/jpa-annotation-example.svg?branch=master)](https://travis-ci.com/akutschera/jpa-annotation-example)
+[![Tests](https://github.com/akutschera/jpa-annotation-example/workflows/test/badge.svg?branch=master)](https://github.com/akutschera/jpa-annotation-example/actions?query=workflow%3ATest)
 
 JPA Annotation examples
 ===
